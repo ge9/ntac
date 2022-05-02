@@ -1,0 +1,33 @@
+body, h1, p {
+    margin: 0;
+    padding: 0;
+    }
+    
+    h1 {
+    color: #ffffff;
+    }
+    
+    h2 {
+    color: #339933;
+    }
+    
+    p {
+    line-height: 2em;
+    }
+    
+    p.hl {
+    font-size: 1.25em;
+    color: #ffffff;
+    }
+
+    div#content {
+    background-color: #ffffff;
+    width: 50%;
+    float: left;
+    }
+    
+    div#main {
+    background-color: #dedede;
+    width: 50%;
+    float: right;
+    }

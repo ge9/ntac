@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Sample</title>
+      <link rel="stylesheet" type="text/css" href="style.css">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.css" integrity="sha384-zTROYFVGOfTw7JV7KUu8udsvW2fx4lWOsCEDqhBreBwlHI4ioVRtmIvEThzJHGET" crossorigin="anonymous">
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.js" integrity="sha384-GxNFqL3r9uRJQhR+47eDxuPoNE7yLftQM8LcxzgS4HT73tp970WS/wV5p8UzCOmb" crossorigin="anonymous"></script>
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/contrib/auto-render.min.js" integrity="sha384-vZTG03m+2yp6N6BNi5iM4rW4oIwk5DfcNdFfxkk9ZWpDriOkXX8voJBFrAO7MpVl" crossorigin="anonymous"></script>
+        <script type="text/javascript">
+        ntachtml=new Object();
+        bqt='`'
+        function initKaTeX(){
+            renderMathInElement(document.body,
+        { delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false}
+         ],
+        trust:true, strict:false}
+        );
+        }
+        </script>
+        <script defer src="out/sample1.js"></script>
+        <script defer src="out/sample2.js"></script>
+        <script defer src="out/exists_infinite_primes_ntac.js"></script>
+        <script defer src="out/pythagorean_triple.is_primitive_classified_of_coprime_of_odd_of_pos.js"></script>
+        <script>
+        function initall(){
+            el = document.getElementById("content");
+            window.details = []
+            for (dat of ntachtml["pythagorean_triple.is_primitive_classified_of_coprime_of_odd_of_pos"]){
+                const tempEl = document.createElement('span');
+                if (typeof dat == "string"){
+                    tempEl.textContent = dat;
+                 }else{
+                    tempEl.innerHTML = `<span><font color=\"#000000\" onmouseover=\"this.color='#009999'\" onmouseout=\"this.color='#000000'\">${dat.sur}</font></span>`
+                    l = window.details.length
+                    window.details.push(dat.con)
+                    tempEl.setAttribute('onmouseover', `change('${l}');`);
+                }
+                el.appendChild(tempEl)
+
+            }
+            initKaTeX();
+        }
+        function change(s){
+            if (s=="") return;
+            document.getElementById("main").innerHTML = window.details[s].replace("/","//");
+            renderMathInElement(document.getElementById("main"),
+        { delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false}
+         ],
+        trust:true, strict:false}
+        );
+            //const bar = document.getElementById('bar');
+            //bar.setAttribute('onclick', 'alert("bar")');
+        }
+        </script>
+<body onload='initall();'>
+    <div>
+    <div id="content">
+
+    </div><div id="main">
+    </div>
+    </div>
+    </body>
+    </html>
