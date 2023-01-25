@@ -42,7 +42,7 @@ match st with
 | semantic_tree.suffice_from e t1 t2 := ⟨fUN t1 ++ Adv._hence /a/ /i/ <V2VP>V2._suf_show <eNP>e :: fUN t2⟩
 | semantic_tree.suffice_exact e1 e2 t := ⟨Adv._from <NP><eN>e1 /a/ /i/ <V2VP>V2._suf_show <eNP>e2 :: fUN t⟩
 | semantic_tree.have_since e1 e2 t := ⟨Adv._since <NP><eN>e1 /a/ <eS>e2 ::fUN t⟩
-| semantic_tree.have_triv e t2 := ⟨Adv._obviously /a/ <eS>e :: fUN t2⟩
+| semantic_tree.have_triv e t2 := ⟨Adv._trivially /a/ <eS>e :: fUN t2⟩
 | semantic_tree.assume_prop e t := ⟨/i/ <V2VP>V2._assume <eNP>e :: fUN t⟩
 | semantic_tree.exact e1 e2 := ⟨[Adv._from <NP><eN>e1 /a/ <eS>e2]⟩
 | semantic_tree.assume_val edef eval t := ⟨/i/ <V3VP> V3._let <NP><eN>edef <NP><eN>eval :: fUN t⟩

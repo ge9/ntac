@@ -7,7 +7,7 @@ with S_ja : S → string
 | (S.Expr e) := e
 | (S.PredVP np vp) := NP_ja np ++ "は" ++ VP_ja vp
 | S._trivial := "自明"
-| S._unresolved := "NOT IMPLEMENTED"
+| S._unresolved := "(unresolved, may be solved by unsupported tactics)"
 | (S.Imp vp) := VP_ja vp
 with NP_ja : NP → string
 | (NP.EmbedS s) := S_ja s ++ "であること"
@@ -19,7 +19,7 @@ with VP_ja : VP → string
 | (VP.UseV2 v2 np) := NP_ja np ++ "を" ++ V2_ja v2
 | (VP.UseV3 v3 np1 np2) := NP_ja np1 ++ "を" ++ NP_ja np2 ++ "と" ++ V3_ja v3
 with V_ja : V → string
-| V.dummy := "(dummy)"
+| V._hold := "成り立つ"
 with V2_ja: V2 → string
 | V2._suf_show := "示せば十分である"
 | V2._assume := "仮定する"
@@ -32,7 +32,7 @@ with Adv_ja : Adv → string
 | (Adv._from np):= NP_ja np ++ "より"
 | Adv._hence := "したがって"
 | Adv._from_assum := "仮定より"
-| Adv._obviously := "明らかに"
+| Adv._trivially := "明らかに"
 | (Adv._since np):= NP_ja np ++ "より"
 
 meta def LANG_ja : nl := {sentence_to_str := λ s, match s with | sentence.of_S s := S_ja s++"。" | sentence.of_str s := s end}

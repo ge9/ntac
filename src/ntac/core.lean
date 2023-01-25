@@ -34,7 +34,13 @@ g ← getgoal1,
 type ← target,
 kind ← infer_type type,
 replc_gi hg $ goal_tree.mk 1 inf1 ⟨[⟨0, inf.unres g, vector.nil, type⟩],dec_trivial⟩, return e
-  
+
+meta def insert_inf1  (inf1 : inf 1) : (ntac unit) :=
+do hg ← getgoal1,
+type ← target,
+kind ← infer_type type,
+replc_gi hg $ goal_tree.mk 1 inf1 ⟨[⟨0, inf.unres hg, vector.nil, type⟩],dec_trivial⟩
+
 /--migrated from `tactic.focus1`-/
 meta def focus1 {α} (tac : ntac α) : ntac α :=
 do g::gs ← get_goals,
@@ -67,15 +73,10 @@ do gs ← tactic_to_ntac get_goals,
         return a)
    end
 
-meta def FOCUS1str {α} (tac : ntac α) (s: string): ntac α := 
-focus1_to_n_inf tac (@inf.ngoals_string detail_cfg.following s)
-meta def FOCUS1triv {α} (tac : ntac α): ntac α := 
-focus1_to_n_inf tac @inf.ngoals_triv
-
 namespace interactive
 /--this seems necessary to define custom tactic combinators. The name should be exactly `itactic`-/
 meta def itactic := ntac unit
-
+meta def skip := ntac.skip
 @[inline] meta def read2 : ntac tactic_state :=
 λ s, let (tac, str) := s in
   result.success tac s
@@ -111,7 +112,7 @@ dec ← decl_name,
 fmt ← goal_tree_to_format_nl_html lang gt,
 unsafe_run_io (do 
 fd ← mk_file_handle ("out/"++dec.to_string++".js") mode.write,
-fs.write fd (mk_buffer.append_string $ "ntachtml[\""++dec.to_string++"\"]=["++fmt.to_string++"]\n") 
+fs.write fd (mk_buffer.append_string $ "ntachtml[\""++dec.to_string++"\"]=["++(fmt.to_string.replace_char '\\' "\\\\")++"]\n") 
 ),
 trace $ goal_tree_to_format_nl_html lang gt
 
@@ -137,7 +138,7 @@ do g::gs ← get_goals,
    let goal_trees := vector.map inf.unres gv in
    let goal_trees:vector goal_tree _:= vector.map₂ (λ inf0 ti, ⟨0, inf0, vector.nil, ti⟩) goal_trees goal_ti in
    do 
-   set_goal_tree $ replc_unres g (λ ti, ⟨goals.length.succ, inf.andthen gv, vector.cons goal_tree1 goal_trees, ti⟩) goal_trees_bak,
+   set_goal_tree $ replc_unres g goal_trees_bak (λ ti, ⟨goals.length.succ, inf.andthen gv, vector.cons goal_tree1 goal_trees, ti⟩),
    all_goals' tac2,
    gs' ← get_goals,
    set_goals (gs' ++ gs)

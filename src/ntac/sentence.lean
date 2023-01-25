@@ -8,7 +8,7 @@ with S : Type
 | PredVP : NP → VP → S
 | _trivial : S
 | _unresolved : S
-| Imp : VP → S
+| Imp : VP → S --imperative
 with NP : Type
 | EmbedS : S → NP
 | UseN : N → NP
@@ -19,7 +19,7 @@ with VP : Type
 | UseV2 : V2 → NP → VP
 | UseV3 : V3 → NP → NP → VP
 with V : Type
-| dummy: V -- currently no intransitive verb 
+| _hold: V
 with V2: Type
 | _suf_show : V2
 | _assume : V2
@@ -32,7 +32,7 @@ with Adv : Type
 | _from : NP → Adv
 | _hence : Adv
 | _from_assum : Adv
-| _obviously : Adv
+| _trivially : Adv
 | _since : NP → Adv
 infix `/a/`:140 := S.AdvS
 infix `/aa/`:140 := S.AdvS'
@@ -54,6 +54,6 @@ meta instance sentence_of_S: has_coe S sentence := ⟨λ s, sentence.of_S s⟩
 
 meta structure nl := (sentence_to_str : sentence → string)
 meta def listS_to_str (l: nl) (lsent: list sentence) : string :=
-string.intercalate "\n" $ list.map l.sentence_to_str lsent
+"\n".intercalate $ list.map l.sentence_to_str lsent
 --the precedence of ++ is 65
 --the precedence of :: is 67

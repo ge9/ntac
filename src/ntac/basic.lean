@@ -11,12 +11,11 @@ local postfix *:9001 := many
 namespace ntac.interactive
 
 meta def exact (q : parse texpr) : ntac unit :=
-do tg ← getgoal1,
-tgt : expr ← target,
+do g1 ← getgoal1,
+   tgt ← target,
    e ← i_to_expr_strict ``(%%q : %%tgt),
    tactic.exact e,
-   kata ← infer_type e,
-   replc_gi tg $ goal_tree.mk 0 (inf.exact e) vector.nil
+   replc_gi g1 $ goal_tree.mk 0 (inf.exact e) vector.nil
 meta def «from» := exact
 meta def get_goal_tree_expr_list (goals : list(name × expr)): ntac (list goal_tree) :=
 do goal ← goals.mfilter $ λ ⟨n, m⟩, bnot <$> (is_assigned m),
@@ -71,24 +70,24 @@ meta def rw  (q : parse rw_rules) (l : parse location) (cfg : rewrite_cfg := {})
 meta def rwa (q : parse rw_rules) (l : parse location) (cfg : rewrite_cfg := {}) : ntac unit :=
 rewrite q l cfg >> try assumption
 
-meta def apply_mycore (e : expr) (cfg : apply_cfg := {}) : ntac (list (name × expr)) := 
+meta def apply_ntac_core (e : expr) (cfg : apply_cfg := {}) : ntac (list (name × expr)) := 
 do tg ← getgoal1,
   goals ← tactic.apply_core e cfg,
   glist ← get_goal_tree_expr_list goals,
   match glist with
-  | [] := do trace "apply generated no goals", return goals
+  | [] := return goals -- apply generated no goals
   | x::xs := do replc_gi tg $ goal_tree.mk (x::xs).length (inf.apply e) ⟨(x::xs),by refl⟩, return goals
   end
 
 meta def tact_apply (e : expr) (cfg : apply_cfg := {}) : ntac (list (name × expr)) :=
-do r ← apply_mycore e cfg,
+do r ← apply_ntac_core e cfg,
    try_apply_opt_auto_param_for_apply cfg r,
    return r
 
 meta def apply  (q : parse texpr) : ntac unit :=
 concat_tags (do h ← i_to_expr_for_apply q, tact_apply h)
 meta def tact_eapply (e : expr) : ntac (list (name × expr)) :=
-apply_mycore e {new_goals := new_goals.non_dep_only}
+apply_ntac_core e {new_goals := new_goals.non_dep_only}
 meta def eapply (q : parse texpr) : ntac unit :=
 concat_tags ((i_to_expr_for_apply q) >>= tact_eapply)
 
@@ -110,14 +109,14 @@ meta def split : ntac unit :=
 do tg ← getgoal1,
 [c] ← ↑(target' >>= get_constructors_for) | fail "split tactic failed, target is not an inductive datatype with only one constructor",
   k ← mk_const c,
-goals ← apply_mycore k,
+goals ← apply_ntac_core k,
 glist ← get_goal_tree_expr_list goals,
   match glist with
   | [] := fail "apply generated no goals"
   | x::xs := do replc_gi tg $ goal_tree.mk (x::xs).length (inf.apply tg) ⟨(x::xs),by refl⟩, concat_tags $ return goals
   end
 
-meta def intro2_core (tg:expr) (n : name) : ntac expr :=
+meta def intro_ntac_core (tg:expr) (n : name) : ntac expr :=
 do e ← intro_core n,
  te ← infer_type e,
  ng ← getgoalinfo1,
@@ -125,13 +124,13 @@ do e ← intro_core n,
 replc_gi tg $ goal_tree.mk 1 (inf.intro (n, te)) ⟨[ng],dec_trivial⟩,
 return e
 
-meta def intro2(tg:expr) (n : name) : ntac expr :=
+meta def intro_ntac(tg:expr) (n : name) : ntac expr :=
 do t ← target,
-   if expr.is_pi t ∨ expr.is_let t then intro2_core tg n
-   else whnf_target >> intro2_core tg n
+   if expr.is_pi t ∨ expr.is_let t then intro_ntac_core tg n
+   else whnf_target >> intro_ntac_core tg n
 
 meta def intro1  (tg:expr): ntac expr :=
-intro2 tg `_
+intro_ntac tg `_
 
 meta def propagate_tags (tac : ntac unit) : ntac unit :=
 do tag ← get_main_tag,
@@ -146,9 +145,10 @@ do tag ← get_main_tag,
 meta def intro (t: parse ident_?) : ntac unit := 
 do tg ← getgoal1,match t with
 | none     := propagate_tags (intro1 tg >> skip)
-| (some h) := propagate_tags (intro2 tg h >> skip)
+| (some h) := propagate_tags (intro_ntac tg h >> skip)
 end
 
+/--new hypothesis introduced as a subgoal and solved afterwards-/
 meta def assert (h : name) (t : expr) : ntac expr := 
 do tg ← getgoal1,
 e ← tactic.assert h t,
@@ -157,6 +157,7 @@ tgi1 ← mk_unres_goal_tree tg1,
 tgi2 ← mk_unres_goal_tree tg2,
 replc_gi tg $ goal_tree.mk 2 (inf.willhave ⟨h,t⟩) ⟨[tgi1, tgi2], dec_trivial⟩, return e
 
+/--directly give value to add new hypothesis-/
 meta def assertv (h : name) (t : expr) (v : expr) : ntac expr := 
 do tg ← getgoal1,
 e ← tactic.assertv h t v,

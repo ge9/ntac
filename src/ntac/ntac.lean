@@ -21,6 +21,10 @@ match res with
 | (result.exception t ref s) := (result.exception t ref (s,str))
 end
 
+meta def tactic_to_ntac_literate {α} (t: tactic α): ntac α :=
+do e ← tactic_to_ntac t,
+return e
+
 --use `tactic` as `ntac`
 meta instance {α}: has_coe (tactic α) (ntac α) := ⟨tactic_to_ntac⟩
 
@@ -50,7 +54,9 @@ meta instance : alternative ntac :=
 
 --definitions required to be treated as tactic
 meta def step {α} (c : ntac α) : ntac unit := do gs ← tactic_to_ntac get_goals,c >>return ()
-meta def istep {α} (line0 col0 : ℕ) (line col : ℕ) (t : ntac α) : ntac unit :=
+
+---3.32.1 → 3.49.1で修正
+meta def istep {α} (line0 col0 line col ast : ℕ) (t : ntac α) : ntac unit :=
 λ s, (@scope_trace _ line col (λ _, step t s)).clamp_pos line0 line col
 meta def save_info (p : pos) : ntac unit := tactic_to_ntac $ tactic.save_info p
 meta def execute (c : ntac unit) : ntac unit := c
@@ -61,14 +67,15 @@ meta def first {α} : list (ntac α) → ntac α
 | (t::ts) := t <|> first ts
 
 --utility functions
-meta def change_goal_tree (f:goal_tree → goal_tree) : ntac unit := 
-λ sa, let (tst, goal_tree) := sa in result.success () (tst, f goal_tree)
+--meta def change_goal_tree (f:goal_tree → goal_tree) : ntac unit := 
+--λ sa, let (tst, goal_tree) := sa in result.success () (tst, f goal_tree)
 meta def set_goal_tree (g: goal_tree) : ntac unit :=
 λ sa, let (tst, _) := sa in result.success () (tst, g)
 meta def get_goal_tree: ntac goal_tree := 
 λ sa, let (tst, goal_tree) := sa in result.success goal_tree (tst, goal_tree)
-
-meta def replc_gi (e:expr) (g: expr → goal_tree) := change_goal_tree $ replc_unres e g
+ 
+/--replc_unresを今のgoal_treeに適用する。よく使うので関数とする-/
+meta def replc_gi (e:expr) (g: expr → goal_tree): ntac unit := λ sa, let (tst, goal_tree) := sa in result.success () (tst, replc_unres e goal_tree g)
 meta def mk_unres_goal_tree (g: expr) : ntac goal_tree :=
 do type ← infer_type g,
 kind ← infer_type type, return $ ⟨0, inf.unres g, vector.nil, type⟩ 

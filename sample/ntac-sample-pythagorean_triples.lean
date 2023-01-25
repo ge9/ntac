@@ -3,12 +3,12 @@ Copyright (c) 2020 Paul van Wamelen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Paul van Wamelen
 -/
-import algebra.field
+import algebra.field.basic
 import ring_theory.int.basic
-import algebra.group_with_zero.power
 import tactic.ring
 import tactic.ring_exp
 import tactic.field_simp
+import data.int.nat_prime
 import data.zmod.basic
 
 import ntac
@@ -72,14 +72,10 @@ by rwa [pythagorean_triple_comm]
 /-- A triple is still a triple if you multiply `x`, `y` and `z`
 by a constant `k`. -/
 lemma mul (k : ℤ) : pythagorean_triple (k * x) (k * y) (k * z) :=
-begin
-  by_cases hk : k = 0,
-  { simp only [pythagorean_triple, hk, zero_mul, zero_add], },
-  { calc (k * x) * (k * x) + (k * y) * (k * y)
-        = k ^ 2 * (x * x + y * y) : by ring
-    ... = k ^ 2 * (z * z)         : by rw h.eq
-    ... = (k * z) * (k * z)       : by ring }
-end
+calc (k * x) * (k * x) + (k * y) * (k * y)
+      = k ^ 2 * (x * x + y * y) : by ring
+  ... = k ^ 2 * (z * z)         : by rw h.eq
+  ... = (k * z) * (k * z)       : by ring
 
 omit h
 
@@ -159,7 +155,7 @@ begin
     ∃ (k : ℕ) x0 y0, 0 < k ∧ int.gcd x0 y0 = 1 ∧ x = x0 * k ∧ y = y0 * k :=
     int.exists_gcd_one' (nat.pos_of_ne_zero h0),
   rw [int.gcd_mul_right, h2, int.nat_abs_of_nat, one_mul],
-  rw [← int.pow_dvd_pow_iff (dec_trivial : 0 < 2), sq z, ← h.eq],
+  rw [← int.pow_dvd_pow_iff zero_lt_two, sq z, ← h.eq],
   rw (by ring : x0 * k * (x0 * k) + y0 * k * (y0 * k) = k ^ 2 * (x0 * x0 + y0 * y0)),
   exact dvd_mul_right _ _
 end
@@ -187,8 +183,9 @@ lemma is_classified_of_is_primitive_classified (hp : h.is_primitive_classified) 
 begin
   obtain ⟨m, n, H⟩ := hp,
   use [1, m, n],
-  rcases H with ⟨⟨rfl, rfl⟩ | ⟨rfl, rfl⟩, co, pp⟩;
-  { apply and.intro _ co, rw one_mul, rw one_mul, tauto }
+  rcases H with ⟨t, co, pp⟩,
+  rw [one_mul, one_mul],
+  exact ⟨t, co⟩,
 end
 
 lemma is_classified_of_normalize_is_primitive_classified
@@ -224,7 +221,7 @@ begin
 end
 
 lemma coprime_of_coprime (hc : int.gcd x y = 1) : int.gcd y z = 1 :=
-begin
+begin[ntac]
   by_contradiction H,
   obtain ⟨p, hp, hpy, hpz⟩ := nat.prime.not_coprime_iff_dvd.mp H,
   apply hp.not_dvd_one,
@@ -253,7 +250,7 @@ def circle_equiv_gen (hk : ∀ x : K, 1 + x^2 ≠ 0) :
 { to_fun := λ x, ⟨⟨2 * x / (1 + x^2), (1 - x^2) / (1 + x^2)⟩,
     by { field_simp [hk x, div_pow], ring },
     begin
-      simp only [ne.def, div_eq_iff (hk x), ←neg_mul_eq_neg_mul, one_mul, neg_add,
+      simp only [ne.def, div_eq_iff (hk x), neg_mul, one_mul, neg_add,
         sub_eq_add_neg, add_left_inj],
       simpa only [eq_neg_iff_add_eq_zero, one_pow] using hk 1,
     end⟩,
@@ -267,7 +264,7 @@ def circle_equiv_gen (hk : ∀ x : K, 1 + x^2 ≠ 0) :
   right_inv := λ ⟨⟨x, y⟩, hxy, hy⟩,
   begin
     change x ^ 2 + y ^ 2 = 1 at hxy,
-    have h2 : y + 1 ≠ 0, { apply mt eq_neg_of_add_eq_zero, exact hy },
+    have h2 : y + 1 ≠ 0 := mt eq_neg_of_add_eq_zero_left hy,
     have h3 : (y + 1) ^ 2 + x ^ 2 = 2 * (y + 1),
     { rw [(add_neg_eq_iff_eq_add.mpr hxy.symm).symm], ring },
     have h4 : (2 : K) ≠ 0, { convert hk 1, rw one_pow 2, refl },
@@ -412,7 +409,7 @@ lemma is_primitive_classified_aux (hc : x.gcd y = 1) (hzpos : 0 < z)
 begin
   have hz : z ≠ 0, apply ne_of_gt hzpos,
   have h2 : y = m ^ 2 - n ^ 2 ∧ z = m ^ 2 + n ^ 2,
-    { apply rat.div_int_inj hzpos hm2n2 (h.coprime_of_coprime hc) H, rw [hw2], norm_cast },
+  { apply rat.div_int_inj hzpos hm2n2 (h.coprime_of_coprime hc) H, rw [hw2], norm_cast },
   use [m, n], apply and.intro _ (and.intro co pp), right,
   refine ⟨_, h2.left⟩,
   rw [← rat.coe_int_inj _ _, ← div_left_inj' ((mt (rat.coe_int_inj z 0).mp) hz), hv2, h2.right],
@@ -423,15 +420,15 @@ theorem is_primitive_classified_of_coprime_of_odd_of_pos
   (hc : int.gcd x y = 1) (hyo : y % 2 = 1) (hzpos : 0 < z) :
   h.is_primitive_classified :=
 begin[ntac]
-  FOCUS1str {
+  NTAC_focus1_str {
   by_cases h0 : x = 0, { exact h.is_primitive_classified_of_coprime_of_zero_left hc h0 },
-  } "If $x=0$, $x=2*1*0, y=1^1-0^0, z=1^1+0^0$ satisfies $(x, y, z) = (0, 1, 1)$, so we assume $x≠0$. ",
-  FOCUS1str {
+  }"If $x=0$, $x=2*1*0, y=1^1-0^0, z=1^1+0^0$ satisfies $(x, y, z) = (0, 1, 1)$, so we assume $x≠0$. " tt tt,
+  NTAC_focus1_list {
   let v := (x : ℚ) / z,
   let w := (y : ℚ) / z,
-  }"let $v = x/z,  w = y/z$. ",
+  }  ["let ",v = x/z,",",  w = y/z,". "] ff tt,
   have hp : (⟨v, w⟩ : ℚ × ℚ) ∈ {p : ℚ × ℚ | p.1^2 + p.2^2 = 1 ∧ p.2 ≠ -1},
-  SOL1_str{
+  NTAC_focus1_list{
   have hz : z ≠ 0, apply ne_of_gt hzpos,
   have hq : v ^ 2 + w ^ 2 = 1,
   { field_simp [hz, sq], norm_cast, exact h },
@@ -440,66 +437,73 @@ begin[ntac]
   { contrapose! hvz with hw1,
     rw [hw1, neg_sq, one_pow, add_left_eq_self] at hq,
     exact pow_eq_zero hq, },
-    exact ⟨hq, hw1⟩}"Since $v≠0$, we have $v^2+w^2=1$ and $w≠-1$. ",
-
+    exact ⟨hq, hw1⟩}
+    ["Since ",z≠0, ", we have ", v^2+w^2=1," and ", w≠-1,". "] tt tt,
+    
   have hQ : ∀ x : ℚ, 1 + x^2 ≠ 0,
-  FOCUS1str
-  { intro q, apply ne_of_gt, exact lt_add_of_pos_of_le zero_lt_one (sq_nonneg q) }"",
-  FOCUS1str {
+  NTAC_solve1_auto
+  { intro q, apply ne_of_gt, exact lt_add_of_pos_of_le zero_lt_one (sq_nonneg q) },
+  NTAC_focus1_str {
   let q := (circle_equiv_gen hQ).symm ⟨⟨v, w⟩, hp⟩}
-  "The point $(v, w)$ is on unit circle except (0, -1), so we have a rational number $q$ defined as the y coordinate of the intersection of x-axis and the line from this point to (0, -1). ",
+  "The point $(v, w)$ is on unit circle except (0, -1), so we have a rational number $q$ defined as the y coordinate of the intersection of x-axis and the line from this point to (0, -1). " tt ff,
   have ht4 : v = 2 * q / (1 + q ^ 2) ∧ w = (1 - q ^ 2) / (1 + q ^ 2),
-  SOL1p_list
-  { SOL1p_list {apply prod.mk.inj,
+  NTAC_focus1_list
+  {apply prod.mk.inj,
     have := ((circle_equiv_gen hQ).apply_symm_apply ⟨⟨v, w⟩, hp⟩).symm,
-    exact congr_arg subtype.val this,} ["By simple calculation"]} ["If we express $v$, $w$ by $q$, we have ",v = 2*q / (1 + q^2), ",",w = (1 - q^2) / (1 + q^2),". "],
-  FOCUS1str {
+    exact congr_arg subtype.val this,}
+    ["If we express $v$, $w$ by $q$, we have ",v = 2*q / (1 + q^2), ",",w = (1 - q^2) / (1 + q^2),". "] tt tt,
+  NTAC_focus1_str {
   let m := (q.denom : ℤ),
   let n := q.num,
-  }"Let $m$ and $n$ be the denominator and numerator of the irredducible fraction $q$. ",
-  FOCUS1triv{
-  have hm0 : m ≠ 0, { norm_cast, apply rat.denom_ne_zero q },
+  }"Let $m$ and $n$ be the denominator and numerator of the irredducible fraction $q$. " tt ff,
+ 
+  
   have hq2 : q = n / m := (rat.num_div_denom q).symm,
   have hm2n2 : 0 < m ^ 2 + n ^ 2,
-  { apply lt_add_of_pos_of_le _ (sq_nonneg n),
-    exact lt_of_le_of_ne (sq_nonneg m) (ne.symm (pow_ne_zero 2 hm0)) }},
+  NTAC_focus1_list
+  {{ apply lt_add_of_pos_of_le _ (sq_nonneg n),
+    have hm0 : m ≠ 0, { norm_cast, apply rat.denom_ne_zero q },
+    exact lt_of_le_of_ne (sq_nonneg m) (ne.symm (pow_ne_zero 2 hm0)) }}
+    ["Since ", m ≠ 0, ",we have ", 0 < m ^ 2 + n ^ 2, " ."] tt tt
+    
+    ,
   have hw2 : w = (m ^ 2 - n ^ 2) / (m ^ 2 + n ^ 2),
-  SOL1p_list{ rw [ht4.2, hq2], field_simp [hm2n2, rat.denom_ne_zero q, -rat.num_div_denom] }
-  ["Then ",w = (m^2 - n^2) / (m^2 + n^2)," and "],
+  NTAC_focus1_list{ rw [ht4.2, hq2], field_simp [hm2n2, rat.denom_ne_zero q, -rat.num_div_denom] }
+  ["Then ",w = (m^2 - n^2) / (m^2 + n^2)," and "] tt tt,
   have hv2 : v = 2 * m * n / (m ^ 2 + n ^ 2),
-  SOL1p_list
+  NTAC_focus1_list
   { 
     have hm2n20 : (m : ℚ) ^ 2 + (n : ℚ) ^ 2 ≠ 0,
   { norm_cast, simpa only [int.coe_nat_pow] using ne_of_gt hm2n2 },
     apply eq.symm, apply (div_eq_iff hm2n20).mpr, rw [ht4.1], field_simp [hQ q],
     rw [hq2] {occs := occurrences.pos [2, 3]},
     field_simp [rat.denom_ne_zero q, -rat.num_div_denom],
-    ring } [v = (2*↑m*↑n / (↑m^2 + ↑n^2)),"holds. "],
-  FOCUS1str {
+    ring } [v = (2*↑m*↑n / (↑m^2 + ↑n^2)),"holds. "] tt tt,
+  NTAC_focus1_str {
   have hnmcp : int.gcd n m = 1 := q.cop,
   have hmncp : int.gcd m n = 1, { rw int.gcd_comm, exact hnmcp },
   cases int.mod_two_eq_zero_or_one m with hm2 hm2;
     cases int.mod_two_eq_zero_or_one n with hn2 hn2,
-    } "Prove by cases. ",
-    SOL1_str{ -- m even, n even
+    } "Prove by cases. " tt tt,
+    NTAC_focus1_str{ -- m even, n even
     exfalso,
     have h1 : 2 ∣ (int.gcd n m : ℤ),
     { exact int.dvd_gcd (int.dvd_of_mod_eq_zero hn2) (int.dvd_of_mod_eq_zero hm2) },
     rw hnmcp at h1, revert h1, norm_num }
-    "Since $m$ and $n$ are coprime, not both $m$ and $n$ are even. ",
-  SOL1p_str
+    "Since $m$ and $n$ are coprime, not both $m$ and $n$ are even. " tt tt,
+  NTAC_focus1_str
   { -- m even, n odd
     apply h.is_primitive_classified_aux hc hzpos hm2n2 hv2 hw2 _ hmncp,
     { apply or.intro_left, exact and.intro hm2 hn2 },
     { apply coprime_sq_sub_sq_add_of_even_odd hmncp hm2 hn2 } }
-    "If $m$ is even and $n$ is odd, $m, n$ satisfy the condition. ",
-  SOL1p_str
+    "If $m$ is even and $n$ is odd, $m, n$ satisfy the condition. " tt tt ,
+  NTAC_focus1_str
   { -- m odd, n even
     apply h.is_primitive_classified_aux hc hzpos hm2n2 hv2 hw2 _ hmncp,
     { apply or.intro_right, exact and.intro hm2 hn2 },
     apply coprime_sq_sub_sq_add_of_odd_even hmncp hm2 hn2 } 
-  "Same for the case $m$ is odd and $n$ is even. ",
-  SOL1p_list { -- m odd, n odd
+  "Same for the case $m$ is odd and $n$ is even. " tt tt,
+  NTAC_focus1_list { -- m odd, n odd
     exfalso,
     have h1 : 2 ∣ m ^ 2 + n ^ 2 ∧ 2 ∣ m ^ 2 - n ^ 2
       ∧ ((m ^ 2 - n ^ 2) / 2) % 2 = 0 ∧ int.gcd ((m ^ 2 - n ^ 2) / 2) ((m ^ 2 + n ^ 2) / 2) = 1,
@@ -513,9 +517,10 @@ begin[ntac]
     rw [h2.1, h1.2.2.1] at hyo,
     revert hyo,
     norm_num }
-    ["In the case both are odd, since the square of odd number is congruent to $1$ modulo $4$, ",z = (m^2 + n^2)/2,",", y = (m^2 - n^2)/2 ,", which contradicts the assumption that $y$ is odd. (Note that $y$ and $z$ are coprime). "],
+    ["In the case both are odd, since the square of an odd number is congruent to $1$ modulo $4$, ",z = (m^2 + n^2)/2,",", y = (m^2 - n^2)/2 ,", which contradicts the assumption that $y$ is odd. (Note that $y$ and $z$ are coprime). "] tt tt,
     trace_state, trace_proof LANG_en, trace_proof_file LANG_en
 end
+
 
 theorem is_primitive_classified_of_coprime_of_pos (hc : int.gcd x y = 1) (hzpos : 0 < z):
   h.is_primitive_classified :=
